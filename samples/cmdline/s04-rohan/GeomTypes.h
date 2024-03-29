@@ -21,7 +21,9 @@
 #include <vector>
 #include <chrono>
 
-constexpr int NUM_POINTS = 1000000;
+constexpr int NUM_POINTS = 51794907;
+//constexpr int NUM_POINTS = 4976447;
+//constexpr int NUM_POINTS = 20000000;
 constexpr int NUM_STEPS = 1;
 
 using namespace owl;
@@ -80,6 +82,7 @@ struct MyGlobals
 };
 
 struct ProfileStatistics {
+  chrono::microseconds sortTime;
   chrono::microseconds intersectionsTime;
   chrono::microseconds sceneBuildTime;
   chrono::microseconds totalProgramTime;

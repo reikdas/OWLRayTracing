@@ -191,17 +191,18 @@ float computeObjectsAttractionForce(Point point, Node *bhNode, std::vector<Point
 float force_on(Point point, Node* node, std::vector<Point> &points) {
   if(node->type == bhLeafNode) {
     //std::cout << "Node: Mass = " << node->mass << ", Center of Mass = (" << node->centerOfMassX << ", " << node->centerOfMassY << ")\n";
-    if((node->mass != 0.0f) && ((point.pos.x != node->cofm.x) || (point.pos.y != node->cofm.y) || (point.pos.z != node->cofm.z))) {
-      //if(point.idX == 5382) printf("Intersected leaf at node with mass! ->%f\n", node->mass);
+    if((node->mass != 0.0f) && !((point.pos.x == node->cofm.x) && (point.pos.y == node->cofm.y) && (point.pos.z == node->cofm.z))) {
+      //if(point.idX == ERRORING_POINT) printf("Intersected leaf at node with mass! ->%f PrimID ->%d\n", node->mass, node->dfsIndex);
       return computeObjectsAttractionForce(point, node, points);
     } else {
       return 0;
     }
   }
 
+  //if(node->dfsIndex == 227748 && point.idX == 3635460) printf("node->s is -> %f length is ->%f\n", node->s, distanceBetweenObjects(point, node) * THRESHOLD);
   if(node->s < distanceBetweenObjects(point, node) * THRESHOLD) {
     //if(point.idX == 0) printf("Approximate")
-    //if(point.idX == 5382) printf("Approximated at node with mass! ->%f\n", node->mass);
+    //if(point.idX == ERRORING_POINT) printf("Approximated at node with mass! ->%f PrimID ->%d\n", node->mass, node->dfsIndex);
     return computeObjectsAttractionForce(point, node, points);
   }
 

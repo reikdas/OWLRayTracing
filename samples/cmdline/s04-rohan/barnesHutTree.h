@@ -8,6 +8,8 @@
 #define THRESHOLD 0.6f
 #define GRAVITATIONAL_CONSTANT .1f
 #define BUCKET_SIZE 32
+#define ERRORING_POINT 2467409
+#define PRIM_ID 890988
 
 using namespace std;
 
@@ -79,7 +81,6 @@ namespace owl {
       void printTree(Node* root, int depth);
       void computeForces(Node* node, std::vector<Point> &points, std::vector<float>& cpuComputedForces);
       void traverseOctreeDFS(Node* node, std::vector<Node*>& leafNodes, float *minS);
-      //void calculateCenterOfMass();
   };
 }
 

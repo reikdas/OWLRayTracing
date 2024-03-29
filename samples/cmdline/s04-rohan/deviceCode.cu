@@ -33,6 +33,7 @@ OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
   deviceBhNode bhNode = optixLaunchParams.deviceBhNodes[optixGetPayload_4()];
   float currentComputedForce = __uint_as_float(optixGetPayload_1());
   if(bhNode.isLeaf == 1) {
+    //if(pointID == ERRORING_POINT) printf("Approximated leaf at node with mass! ->%f PrimID ->%d\n", bhNode.mass, optixGetPayload_4());
     for(int i = 0; i < bhNode.numParticles; i++) {
       int particleID = bhNode.particles[i];
       if(particleID != pointID) {
@@ -46,6 +47,7 @@ OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
       }
     }
   } else {
+    //if(pointID == ERRORING_POINT) printf("Approximated at node with mass! ->%f PrimID ->%d\n", bhNode.mass, optixGetPayload_4());
     currentComputedForce += ((optixLaunchParams.devicePoints[pointID].mass * bhNode.mass) / __uint_as_float(optixGetPayload_7())) * GRAVITATIONAL_CONSTANT;
   }
 
@@ -63,6 +65,7 @@ OPTIX_MISS_PROGRAM(miss)()
   int pointID = optixGetPayload_3();
 
   if(bhNode.isLeaf == 1 && optixGetPayload_0() == 0) {
+    //if(pointID == ERRORING_POINT) printf("Intersected leaf at node with mass! ->%f PrimID ->%d\n", bhNode.mass, optixGetPayload_4());
      for(int i = 0; i < bhNode.numParticles; i++) {
       int particleID = bhNode.particles[i];
       if(particleID != pointID) {
@@ -87,6 +90,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   const RayGenData &self = owl::getProgramData<RayGenData>();
   const vec2i pixelID = owl::getLaunchIndex();
 
+
   CustomRay currentRay = self.primaryLaunchRays[pixelID.x];
   Point point = optixLaunchParams.devicePoints[currentRay.pointID];
   deviceBhNode bhNode = optixLaunchParams.deviceBhNodes[currentRay.primID];
@@ -96,6 +100,9 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   float dz = fabs(point.pos.z - bhNode.centerOfMassZ);
 
   int pointID = currentRay.pointID;
+  // if(pointID == 16777217) {
+  //   printf("RayGen\n");
+  // }
   float r_2 = (dx * dx) + (dy * dy) + (dz * dz);
   uint8_t rayEnd = 0;
 
@@ -109,7 +116,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   unsigned int p7 = __float_as_uint(r_2);                 // r_2
 
   float rayLength = sqrtf(r_2) * THRESHOLD;
-  rayLength = sqrtf(rayLength);
+  //rayLength = sqrtf(rayLength);
 
   // Launch rays
   owl::Ray ray(currentRay.orgin, vec3f(1,0,0), 0, rayLength);
@@ -141,8 +148,11 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
     dz = point.pos.z - bhNode.centerOfMassZ;
     r_2 = (dx * dx) + (dy * dy) + (dz * dz);
     rayLength = sqrtf(r_2)  * THRESHOLD;
+    if(p4 == PRIM_ID && point.idX == ERRORING_POINT) printf("raylength ->%f\n", rayLength);
+    if(p4 == PRIM_ID && point.idX == ERRORING_POINT) printf("rayOrigin.x ->%f\n", ray.origin.x);
+    if(p4 == PRIM_ID && point.idX == ERRORING_POINT) printf("primID ->%d\n", p4);
     p7 = __float_as_int(r_2);
-    rayLength = sqrtf(rayLength);
+    //rayLength = sqrtf(rayLength);
 
     ray.tmax = rayLength;
     rayEnd = (p4 >= optixLaunchParams.numPrims || p4 == 0) ? 1 : 0;

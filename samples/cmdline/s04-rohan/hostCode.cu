@@ -23,7 +23,6 @@
 #include <owl/DeviceMemory.h>
 // our device-side data structures
 #include "GeomTypes.h"
-#include "kernels.h"
 #include "less.hpp"
 //#include "owlViewer/OWLViewer.h"
 
@@ -60,7 +59,7 @@
 
 extern "C" char deviceCode_ptx[];
 
-#define TRIANGLEX_THRESHOLD 50000.0f // this has to be greater than the GRID_SIZE in barnesHutTree.h
+#define TRIANGLEX_THRESHOLD 50.0f // this has to be greater than the GRID_SIZE in barnesHutTree.h
 
 // random init
 random_device rd;
@@ -69,7 +68,7 @@ uniform_real_distribution<float> dis(GRID_SIZE/-2.0f, GRID_SIZE/2.0f);  // Range
 uniform_real_distribution<float> disMass(10.0f, 2000.0f);  // Range mass 
 
 // global variables
-float gridSize = GRID_SIZE;
+float gridSize = 0.0f;
 ProfileStatistics *profileStats = new ProfileStatistics();
 
 // force calculation global variables
@@ -77,7 +76,7 @@ vector<CustomRay> primaryLaunchRays(NUM_POINTS);
 vector<CustomRay> orderedPrimaryLaunchRays(NUM_POINTS);
 vector<deviceBhNode> deviceBhNodes;
 Point *devicePoints;
-float minNodeSValue = GRID_SIZE + 1.0f;
+float minNodeSValue = 0.0f;
 vector<float> computedForces(NUM_POINTS, 0.0f);
 vector<float> cpuComputedForces(NUM_POINTS, 0.0f);
 
@@ -108,21 +107,35 @@ void treeToDFSArray(Node* root) {
     Node* currentNode = nodeStack.top();
     nodeStack.pop();
     // calculate triangle location
-    triangleXLocation += std::sqrt(currentNode->s);
-    //triangleXLocation += currentNode->s;
-    if(currentNode->s < minNodeSValue) minNodeSValue = currentNode->s;
-    if(triangleXLocation >= TRIANGLEX_THRESHOLD) {
-      level += 3.0f;
-      triangleXLocation = std::sqrt(currentNode->s);
-      //triangleXLocation = currentNode->s;
-    }
+    float prevTriangleXLocation = triangleXLocation;
 
+    if(primIDIndex == PRIM_ID+1) {
+      //printf("TriangleX: %f\n", triangleXLocation);
+      printf("prevTriangleX in float: %f\n", prevTriangleXLocation);
+    }
+    //triangleXLocation += std::sqrt(currentNode->s);
+    // triangleXLocation += currentNode->s;
+    // if(currentNode->s < minNodeSValue) minNodeSValue = currentNode->s;
+    // if(triangleXLocation >= TRIANGLEX_THRESHOLD) {
+    //   level += 3.0f;
+    //   //triangleXLocation = std::sqrt(currentNode->s);
+    //   deviceBhNodes.back().nextRayLocation_x = 0.0f;
+    //   deviceBhNodes.back().nextRayLocation_y = level;
+    //   triangleXLocation = currentNode->s;
+    // }
+    triangleXLocation = currentNode->s;
+    if(currentNode->s < minNodeSValue) minNodeSValue = currentNode->s;
+    // if(primIDIndex == PRIM_ID+1) {
+    //   printf("TriangleX: %f\n", triangleXLocation);
+    //   printf("node-s %f\n", currentNode->s);
+    // }
     // add triangle to scene corresponding to barnes hut node
     vertices.push_back({triangleXLocation, 0.0f + level, -0.5f});
     vertices.push_back({triangleXLocation, -0.5f + level, 0.5f});
     vertices.push_back({triangleXLocation, 0.5f + level, 0.5f});
     indices.push_back({currentIndex, currentIndex+1, currentIndex+2});
     currentIndex += 3;
+    level += 3.0f;
 
     // create device bhNode
     deviceBhNode currentBhNode;
@@ -131,7 +144,7 @@ void treeToDFSArray(Node* root) {
     currentBhNode.centerOfMassY = currentNode->cofm.y;
     currentBhNode.centerOfMassZ = currentNode->cofm.z;
     currentBhNode.isLeaf = (currentNode->type == bhLeafNode) ? 1 : 0;
-    currentBhNode.nextRayLocation_x = triangleXLocation;
+    currentBhNode.nextRayLocation_x = 0.0f;
     currentBhNode.nextRayLocation_y = level;
     currentBhNode.nextPrimId = primIDIndex;
     currentBhNode.numParticles = currentNode->particles.size();
@@ -161,6 +174,7 @@ void orderPointsDFS() {
   for(int i = 0; i < dfsBHNodes.size(); i++) {
     if(dfsBHNodes[i]->type == bhLeafNode) {
       for(int j = 0; j < dfsBHNodes[i]->particles.size(); j++) {
+        //if(dfsBHNodes[i]->particles[j] == 16777217) printf("FOUND IT HERE!!!!!!!!!!!"); 
         orderedPrimaryLaunchRays[primaryRayIndex].pointID = dfsBHNodes[i]->particles[j];
         orderedPrimaryLaunchRays[primaryRayIndex].primID = 0;
         orderedPrimaryLaunchRays[primaryRayIndex].orgin = vec3f(0.0f, 0.0f, 0.0f);
@@ -332,10 +346,10 @@ int main(int ac, char **av) {
         Point point;
         while (std::getline(ss, token, ',')) {
             switch (index) {
-                case 0: point.pos.x = std::stof(token) * 1000.0f; break; 
-                case 1: point.pos.y = std::stof(token) * 1000.0f; break;
-                case 2: point.pos.z = std::stof(token) * 1000.0f; break;
-                case 3: point.mass = std::stof(token) * 1E8f; break;
+                case 0: point.pos.x = std::stof(token) * 10.0f; break; 
+                case 1: point.pos.y = std::stof(token) * 10.0f; break;
+                case 2: point.pos.z = std::stof(token) * 10.0f; break;
+                case 3: point.mass = std::stof(token) * 1E5f; break;
                 default: printf("Error reading csv file\n"); break;
             }
             tokens.push_back(token);
@@ -368,16 +382,44 @@ int main(int ac, char **av) {
     return 1; // Exit with an error code
   }
 
+  auto total_run_time = chrono::steady_clock::now();
+
+  float maxX = std::numeric_limits<float>::min(); // Initialize with smallest possible int
+  float maxY = std::numeric_limits<float>::min();
+  float maxZ = std::numeric_limits<float>::min();
+
+  for (int i = 0; i < points.size(); i++) {
+      maxX = max(maxX, fabs(points[i].pos.x)); 
+      maxY = max(maxY, fabs(points[i].pos.y));
+      maxZ = max(maxZ, fabs(points[i].pos.z));
+  }
+
+  gridSize = max(maxX, max(maxY, maxZ));
+  // round to nearest decimal
+  gridSize = ceil(gridSize) * 2;
+  minNodeSValue = gridSize + 1.0f;
+
+  std::cout << "Maximum x: " << maxX << std::endl;
+  std::cout << "Maximum y: " << maxY << std::endl;
+  std::cout << "Maximum z: " << maxZ << std::endl;
+  std::cout << "Grid Size: " << gridSize << std::endl;
+
+  auto sort_time_start = chrono::steady_clock::now();
   using sortPoint = std::array<float, 5>;
   std::vector<sortPoint> pts;
   for(int i = 0; i < points.size(); i++) {
-    float ID = (float)points[i].idX;
+    float ID = static_cast<float>(points[i].idX);
+    if(ID == 16777217.0) printf("FOUND IT HERE!!!!!!!!!!!\n");
     pts.push_back({points[i].pos.x, points[i].pos.y, points[i].pos.z, points[i].mass, ID});
     //printf("Point # %d has x = %f, y = %f, z=%f\n", i, points[i].pos.x, points[i].pos.y, points[i].pos.z);
   }
   std::sort(pts.begin(), pts.end(), zorder_knn::Less<sortPoint, 3>());
 
-  auto total_run_time = chrono::steady_clock::now();
+  auto sort_time_end = chrono::steady_clock::now();
+  profileStats->sortTime += chrono::duration_cast<chrono::microseconds>(sort_time_end - sort_time_start);
+  //end timer
+  
+
   // ##################################################################
   // Building Barnes Hut Tree
   // ##################################################################
@@ -391,8 +433,17 @@ int main(int ac, char **av) {
 
 
   int numDifferent = 0;
-  for(int i = 0; i < pts.size(); i++) {
-    Node *new_node = new Node(pts[i][0], pts[i][1], pts[i][2], gridSize * 0.5, (int)pts[i][4]);
+  printf("pts.size() %d\n", pts.size());
+  points.clear();
+  for(auto i = 0; i < pts.size(); i++) {
+    Point p;
+    p.pos.x = pts[i][0];
+    p.pos.y = pts[i][1];
+    p.pos.z = pts[i][2];
+    p.mass = pts[i][3];
+    p.idX = i;
+    points.push_back(p);
+    Node *new_node = new Node(pts[i][0], pts[i][1], pts[i][2], gridSize * 0.5, i);
     new_node->mass = pts[i][3];
     leaves.push_back(new_node);
   }
@@ -431,7 +482,6 @@ int main(int ac, char **av) {
   }
   printf("Max depth of Bucket Tree: %d\n", maxDepth(root));
   tree->computeCOM(root);
-  ;
   auto tree_build_time_end = chrono::steady_clock::now();
   profileStats->treeBuildTime += chrono::duration_cast<chrono::microseconds>(tree_build_time_end - tree_build_time_start);
   auto iterative_step_time_start = chrono::steady_clock::now();
@@ -515,6 +565,7 @@ int main(int ac, char **av) {
   totalMemoryNeeded += (points.size() * sizeof(Point))/1000000000.0;
   OWLBuffer DevicePointsBuffer = owlDeviceBufferCreate( 
      context, OWL_USER_TYPE(points[0]), points.size(), points.data());
+  printf("points.size() %lu\n", points.size());
   owlParamsSetBuffer(lp, "devicePoints", DevicePointsBuffer);
 
   //printf("Size of malloc for bhNodes is %.2f gb.\n", (deviceBhNodes.size() * sizeof(deviceBhNode))/1000000000.0);
@@ -592,16 +643,20 @@ int main(int ac, char **av) {
   printf("----------------------------------------\n");
 
   int pointsFailing = 0;
+  int print = 0;
   for(int i = 0; i < NUM_POINTS; i++) {
     float percent_error = (abs((rtComputedForces[i] - cpuComputedForces[i])) / cpuComputedForces[i]) * 100.0f;
     if(percent_error > 5.0f) {
-      LOG_OK("++++++++++++++++++++++++");
-      LOG_OK("POINT #" << i << ", (" << points[i].pos.x << ", " << points[i].pos.y << ") , HAS ERROR OF " << percent_error << "%");
-      LOG_OK("++++++++++++++++++++++++");
-      printf("RT force = %f\n", rtComputedForces[i]);
-      printf("CPU force = %f\n", cpuComputedForces[i]);
-      LOG_OK("++++++++++++++++++++++++");
-      printf("\n");
+      if(print < 10) {
+        LOG_OK("++++++++++++++++++++++++");
+        LOG_OK("POINT #" << i << ", (" << points[i].pos.x << ", " << points[i].pos.y << ") , HAS ERROR OF " << percent_error << "%");
+        LOG_OK("++++++++++++++++++++++++");
+        printf("RT force = %f\n", rtComputedForces[i]);
+        printf("CPU force = %f\n", cpuComputedForces[i]);
+        LOG_OK("++++++++++++++++++++++++");
+        printf("\n");
+        print++;
+      }
       pointsFailing++;
     }
   }
@@ -617,6 +672,7 @@ int main(int ac, char **av) {
 
   // Print Statistics
   printf("--------------------------------------------------------------\n");
+  std::cout << "Sort Time: " << profileStats->sortTime.count() / 1000000.0 << " seconds." << std::endl;
   std::cout << "Tree build time: " << profileStats->treeBuildTime.count() / 1000000.0 << " seconds." << std::endl;
   std::cout << "Tree to DFS time: " << profileStats->treeToDFSTime.count() / 1000000.0 << " seconds." << std::endl;
   std::cout << "Install AutoRopes time: " << profileStats->installAutoRopesTime.count() / 1000000.0 << " seconds." << std::endl;
