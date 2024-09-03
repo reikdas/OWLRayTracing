@@ -2,8 +2,8 @@
 To run RT-DBSCAN,
 ```
 cd build
-make sample05-rtow
-./sample05-rtow [inFile] [size] [eps] [minPts] [outFile] 
+make sample02-rtdbscan
+./sample02-rtdbscan [inFile] [size] [eps] [minPts] [outFile] 
 ```
 where
 - \[inFile\]: input filename
