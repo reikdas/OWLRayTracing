@@ -14,20 +14,39 @@
 # limitations under the License.                                           #
 # ======================================================================== #
 
-cuda_compile_and_embed(ptxCode
-  deviceCode.cu
-  )
+# cuda_compile_and_embed(ptxCode
+#   deviceCode.cu
+#   )
 
-add_executable(sample02-rtdbscan
-  hostCode.cpp
-  ${ptxCode}
-  )
+# add_executable(sample02-rtdbscan
+#   hostCode.cpp
+#   ${ptxCode}
+#   )
 
+# target_link_libraries(sample02-rtdbscan
+#   ${OWL_LIBRARIES}
+#   )
+
+# add_test(sample02-rtdbscan
+#   ${CMAKE_BINARY_DIR}/sample02-rtdbscan)
+
+embed_ptx(
+  OUTPUT_TARGET
+    sample02-rtdbscan-ptx
+  PTX_LINK_LIBRARIES
+    owl::owl
+  SOURCES
+    deviceCode.cu
+)
+
+add_executable(sample02-rtdbscan hostCode.cpp)
 target_link_libraries(sample02-rtdbscan
-  ${OWL_LIBRARIES}
-  )
+  PRIVATE
+  sample02-rtdbscan-ptx
+    owl::owl
+    stb_image
+)
+add_test(sample02-rtdbscan ${CMAKE_BINARY_DIR}/sample02-rtdbscan)
 
-add_test(sample02-rtdbscan
-  ${CMAKE_BINARY_DIR}/sample02-rtdbscan)
 
 

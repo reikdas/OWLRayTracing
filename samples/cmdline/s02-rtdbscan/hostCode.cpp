@@ -46,7 +46,6 @@
   std::cout << "#owl.sample(main): " << message << std::endl;    \
   std::cout << OWL_TERMINAL_DEFAULT;
 
-extern "C" char ptxCode[];
 const vec3f lookFrom(13, 2, 3);
 const vec3f lookAt(0, 0, 0);
 const vec3f lookUp(0.f,1.f,0.f);
@@ -55,7 +54,7 @@ const float fovy = 20.f;
 std::vector<Sphere> Spheres;
 std::vector<int> neighbors;
 std::vector<DisjointSet> ds;
-
+extern "C" char deviceCode_ptx[];
 //DisjointSet find
 
 int find(int x, const DisjointSet *d)
@@ -143,7 +142,7 @@ int main(int ac, char **av) {
   // ##################################################################
 
   OWLContext context = owlContextCreate(nullptr, 1);
-  OWLModule module = owlModuleCreate(context, ptxCode);
+  OWLModule module = owlModuleCreate(context, deviceCode_ptx);
 
   // ##################################################################
   // set up all the *GEOMETRY* graph we want to render
