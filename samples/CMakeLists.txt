@@ -15,7 +15,7 @@
 # ======================================================================== #
 
 # support libraries
-add_subdirectory(common)
+# add_subdirectory(common)
 
 # ------------------------------------------------------------------
 #cmdline-only samples, also used for 'make test'

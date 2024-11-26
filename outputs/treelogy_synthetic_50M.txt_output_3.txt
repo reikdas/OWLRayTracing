@@ -1,0 +1,15 @@
+[0;34m#owl.sample(main): Starting run!
+[0mRead 50000000.000000
+Read 1.000000
+Read 0.025000
+Read 0.050000
+Read 0.500000
+Number of points: 50000000
+#owl.sample(main): Bulding Non Bucket Tree with # Of Bodies = 50000000
+[0m--------------------------------------------------------------
+Preprocessing Time: 0.555957 seconds.
+RT Cores Force Calculations time: 2.72313 seconds.
+Execution time: 3.40035 seconds.
+--------------------------------------------------------------
+[0;34m#owl.sample(main): destroying devicegroup ...
+[0m
