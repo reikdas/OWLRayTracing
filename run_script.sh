@@ -31,7 +31,7 @@ fi
 
 # Define the executable path
 BUILD_DIR="./build"
-EXECUTABLE="$BUILD_DIR/s01-rtbarneshut $TYPE"
+EXECUTABLE="$BUILD_DIR/rtbarneshut $TYPE"
 
 # Build the executable
 echo "Cleaning and building the project..."
